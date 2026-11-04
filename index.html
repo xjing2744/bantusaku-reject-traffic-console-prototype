@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>拒量引流 · 配置控台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-symbol">引</span><div>营销管理<span>运营工作台</span></div></div>
+    <div class="nav-caption">业务配置</div>
+    <div class="nav-group">◈ <span>拒量引流与采量</span><span>⌄</span></div>
+    <nav aria-label="主导航">
+      <button data-page="products" class="active"><span>▦</span>产品管理</button>
+      <button data-page="sorting"><span>⇅</span>产品上架排序</button>
+      <button data-page="merchants"><span>▣</span>商户管理</button>
+      <button data-page="accounts"><span>▤</span>账户管理</button>
+    </nav>
+    <div class="sidebar-foot"><span class="online-dot"></span>印尼业务</div>
+  </aside>
+  <div class="workspace">
+    <header><div>拒量引流与采量 <span class="slash">/</span> <span id="breadcrumb">产品管理</span></div><div class="user"><span>印尼</span><span class="avatar">运</span>运营人员</div></header>
+    <main id="main"></main>
+    <details class="demo-tools"><summary>原型演示设置与依据</summary><div class="demo-content">
+      <p>本地静态原型 · 全部为演示数据 · 不连接生产系统</p>
+      <label>产品操作权限 <select id="permission"><option value="all">编辑、复制、详情、操作记录</option><option value="edit">编辑、复制和详情</option><option value="record">仅查看详情和操作记录</option><option value="read">仅查看详情</option></select></label>
+      <label>异常演示 <select id="failure"><option value="none">正常</option><option value="save">编辑保存失败</option><option value="records">记录加载失败</option></select></label>
+      <div class="demo-actions"><button id="resetDemo">恢复全部演示数据</button><a href="说明.md" target="_blank">查看依据与未核实项 ↗</a></div>
+      <p>界面参考历史截图与本轮确认；编辑产品默认分步确认，支持变更备注、附件及操作记录。产品类型、同端页面配置与复制操作按本轮确认补充，未经生产核实。</p>
+      <p>数据保存在当前浏览器；刷新保留配置与记录，关闭弹窗清除未保存内容；切换模块保留已保存内容。定时任务仅保存配置，不自动执行。恢复演示数据会清除本原型中的全部修改。</p>
+    </div></details>
+  </div>
+  <dialog id="modal"><form id="modalForm"><div class="modal-head"><div><h2 id="modalTitle"></h2><p id="modalSubtitle"></p></div><button type="button" class="icon-btn" data-close aria-label="关闭弹窗">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></form></dialog>
+  <dialog id="confirmDialog"><div class="confirm-body"><div class="confirm-icon">!</div><h2 id="confirmTitle"></h2><p id="confirmText"></p></div><div class="modal-footer"><button id="confirmCancel">取消</button><button id="confirmOk" class="primary">确认</button></div></dialog>
+  <dialog id="imageDialog"><div class="modal-head"><h2>图片预览</h2><button class="icon-btn" id="closeImage" aria-label="关闭图片预览">×</button></div><div class="image-body"><img id="largeImage" alt="图片预览"></div><div class="modal-footer" id="imageFooter"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
