@@ -14,6 +14,13 @@ const loanFields=['logo','color','minLoan','maxLoan','minTerm','maxTerm','rate',
 const positions={applying:'申请中首页',submitted:'借款已提交页',locked:'拒绝锁定页'};
 const pageNames={products:'产品管理',sorting:'产品上架排序',merchants:'商户管理',accounts:'账户管理'};
 const STORAGE='reject-traffic-prototype-v1';
+// 演示桥接：仅导出产品展示及位置配置，不导出商户、账户余额、交易或操作记录。
+function exportCreditConfig(){
+  const fields=['id','name','productType','productImage','client','enabled','logo','glyph','color','minLoan','maxLoan','minTerm','maxTerm','rate','linkAndroid','linkIos','lockOp','lockDays','fdc'];
+  const config={format:'reject-console-demo-v1',exportedAt:new Date().toISOString(),products:data.products.map(p=>Object.fromEntries(fields.map(key=>[key,key==='productType'?(p[key]||'loan'):p[key]]))),placements:clone(data.placements)};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(config,null,2)],{type:'application/json'}));
+  downloadFile(url,'拒量控台-产品展示配置.json');setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function seed(){
   const products=[
     {id:44,name:'智慧信贷',client:'android',accountId:1,price:'0.4000',method:'download',minLoan:2000000,maxLoan:50000000,minTerm:91,maxTerm:360,rate:'0.1000',color:'#37bb60',glyph:'智'},
@@ -338,6 +345,7 @@ document.addEventListener('click',e=>{
 });
 $('#permission').onchange=e=>{permission=e.target.value;render();};$('#failure').onchange=e=>failure=e.target.value;
 $('#resetDemo').onclick=()=>confirmAction('恢复全部演示数据？','本地保存的产品、排序、商户、账户、任务与记录将恢复初始值。',()=>{data=seed();persist();filters={products:{name:'',status:'enabled',productType:'',client:'',merchant:''},merchants:{name:'',status:''},accounts:{name:'',merchant:'',status:''}};productPage=1;render();toast('已恢复演示数据');});
+$('#exportCreditConfig').onclick=exportCreditConfig;
 $('#closeImage').onclick=()=>$('#imageDialog').close();
 for(const d of $$('dialog'))d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom){d.close();if(d.id==='modal')editor=null;}});
 $('#modal').addEventListener('cancel',()=>editor=null);
