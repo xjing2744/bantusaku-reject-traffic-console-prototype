@@ -10,7 +10,7 @@ const dateAgo = d => {const t=new Date();t.setDate(t.getDate()-d);return t.toLoc
 const methods={download:'按下载计费',register:'按注册计费',loan:'按放款计费'};
 const clients={android:'安卓',ios:'苹果'};
 const productTypes={loan:'贷款产品',credit_report:'信用报告产品'};
-const loanFields=['logo','color','minLoan','maxLoan','minTerm','maxTerm','rate','passRate','riskLockDays','description','steps','conditions','repaymentType','repaymentMethod','speed','tags'];
+const loanFields=['logo','color','minLoan','maxLoan','minTerm','maxTerm','rate','passRate','description','steps','conditions','repaymentType','repaymentMethod','speed','tags'];
 const positions={applying:'申请中首页',submitted:'借款已提交页',locked:'拒绝锁定页'};
 const pageNames={products:'产品管理',sorting:'产品上架排序',merchants:'商户管理',accounts:'账户管理'};
 const STORAGE='reject-traffic-prototype-v1';
@@ -42,6 +42,7 @@ let placementClient='android';
 let page='products',position='submitted',productPage=1,recordPage=1;
 let filters={products:{name:'',status:'enabled',productType:'',client:'',merchant:''},merchants:{name:'',status:''},accounts:{name:'',merchant:'',status:''}};
 let permission='all',failure='none',editor=null,recordId=null,transactionAccount=null;
+function canCopyProduct(){return ['all','copy','edit-copy'].includes(permission);}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(data));return true;}catch{toast('本地存储空间不足，请减少图片或恢复演示数据',true);return false;}}
 function commit(){if(persist())toast('已保存');}
 function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className='visible'+(error?' error-toast':'');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.className='',3000);}
@@ -69,15 +70,15 @@ function productsView(){
   const matches=merchantMatches(f.merchant);
   const found=data.products.filter(p=>(!f.name||p.name===f.name)&&(!f.status||p.enabled===(f.status==='enabled'))&&(!f.productType||(p.productType||'loan')===f.productType)&&(!f.client||p.client===f.client)&&(!f.merchant||matches.includes(data.accounts.find(a=>a.id===p.accountId)?.merchantId)));
   productPage=Math.max(1,Math.min(productPage,Math.ceil(found.length/10)||1));
-  const rows=found.slice((productPage-1)*10,productPage*10).map(p=>`<tr><td class="muted number">${p.id}</td><td><button class="link image-preview" data-action="logo-preview" data-id="${p.id}" aria-label="预览${esc(p.name)}图标">${logo(p)}</button></td><td class="product-name">${esc(p.name)}</td><td>${productTypes[p.productType||'loan']}</td><td>${esc(accountName(p.accountId))}</td><td class="number">${Number(p.price).toFixed(4)} <span class="muted">美元</span></td><td>${methods[p.method]}</td><td>${statusButton('product',p)}</td><td><span class="tag ${p.client==='ios'?'gray':''}">${clients[p.client]}</span></td><td class="muted">${esc(p.user)}</td><td class="muted number">${esc(p.time).replace(' ','<br>')}</td><td><div class="row-actions">${['all','edit'].includes(permission)?action('编辑','edit-product',p.id):''}${['all','edit'].includes(permission)?action('复制','copy-product',p.id):''}${action('详情','details',p.id)}${['all','record'].includes(permission)?action('操作记录','records',p.id):''}${action('定时任务','tasks',p.id)}</div></td></tr>`).join('');
+  const rows=found.slice((productPage-1)*10,productPage*10).map(p=>`<tr><td class="muted number">${p.id}</td><td><button class="link image-preview" data-action="logo-preview" data-id="${p.id}" aria-label="预览${esc(p.name)}图标">${logo(p)}</button></td><td class="product-name">${esc(p.name)}</td><td>${productTypes[p.productType||'loan']}</td><td>${esc(accountName(p.accountId))}</td><td class="number">${Number(p.price).toFixed(4)} <span class="muted">美元</span></td><td>${methods[p.method]}</td><td>${statusButton('product',p)}</td><td><span class="tag ${p.client==='ios'?'gray':''}">${clients[p.client]}</span></td><td class="muted">${esc(p.user)}</td><td class="muted number">${esc(p.time).replace(' ','<br>')}</td><td><div class="row-actions">${['all','edit','edit-copy'].includes(permission)?action('编辑','edit-product',p.id):''}${canCopyProduct()?action('复制','copy-product',p.id):''}${action('详情','details',p.id)}${['all','record'].includes(permission)?action('操作记录','records',p.id):''}${action('定时任务','tasks',p.id)}</div></td></tr>`).join('');
   return heading('维护引流产品信息、展示终端与合作配置','新增产品','add-product')+`<form class="panel filters" id="filters">${filterInput('name','产品名称',f.name)}${filterSelect('productType','产品类型',f.productType,Object.entries(productTypes))}${filterSelect('status','状态',f.status,[['enabled','启用'],['disabled','禁用']])}${filterSelect('client','展示终端',f.client,[['android','安卓'],['ios','苹果']])}${filterInput('merchant','商户或结算账户',f.merchant,true,'merchantOptions')}<datalist id="merchantOptions">${data.merchants.filter(m=>m.type==='referral').map(m=>`<option value="${esc(m.name)}">${esc(data.accounts.filter(a=>a.merchantId===m.id).map(a=>a.name).join('、'))}</option>`).join('')}</datalist>${filterButtons()}</form><section class="panel"><div class="table-bar">产品列表 <span class="muted">共 ${found.length} 个产品</span></div>${table(['编号','产品图标','产品名称','产品类型','结算账户','结算单价','结算方式','状态','展示终端','最后操作人','最后操作时间','操作'],rows)}<div class="pagination"><span>共 ${found.length} 条</span><span>每页 10 条</span><button data-action="prev-products" ${productPage<=1?'disabled':''}>‹</button><button class="current">${productPage}</button><button data-action="next-products" ${productPage*10>=found.length?'disabled':''}>›</button></div></section>`;
 }
 function placementItems(pos=position,client=placementClient){return data.placements[pos].filter(o=>data.products.some(p=>p.id===o.id&&p.client===client));}
-function sortedPlacements(){return [...placementItems()].sort((a,b)=>Number(b.listed)-Number(a.listed)||b.rank-a.rank);}
+function sortedPlacements(){return [...placementItems()].sort((a,b)=>Number(b.listed)-Number(a.listed)||a.rank-b.rank);}
 function sortingView(){
   const items=sortedPlacements();
   const rows=items.map(o=>{const p=data.products.find(p=>p.id===o.id);return `<tr draggable="true" data-sort-id="${p.id}" class="${o.listed?'':'off-row'}"><td><span class="drag-handle" title="拖动调整排序">⠿</span></td><td>${logo(p)}</td><td class="product-name">${esc(p.name)} <span class="tag">${clients[p.client]}</span></td><td>${esc(merchantName(data.accounts.find(a=>a.id===p.accountId)?.merchantId))}</td><td><span class="tag ${o.listed?'':'gray'}">${o.listed?'已上架':'已下架'}</span></td><td><input class="sort-input" type="number" min="0" max="9999" step="1" value="${o.rank}" aria-label="${esc(p.name)}排序值" data-rank-id="${p.id}"></td><td><div class="row-actions">${action(o.listed?'下架':'上架','listing',p.id)}${action('删除','remove-placement',p.id,'danger')}${action('上移','move-up',p.id)}${action('下移','move-down',p.id)}</div></td></tr>`;}).join('');
-  return heading('按展示终端和页面分别维护产品上下架与排序',null,null,false)+`<section class="panel"><div class="placement-toolbar"><div class="terminal-switch" role="group" aria-label="展示终端">${Object.entries(clients).map(([key,label])=>`<button data-action="placement-client" data-id="${key}" class="${placementClient===key?'active':''}" aria-pressed="${placementClient===key}">${label==='苹果'?'iOS（苹果）':'安卓'}</button>`).join('')}</div></div><div class="placement-pagebar"><div class="tabs">${Object.entries(positions).map(([key,label])=>`<button data-action="position" data-id="${key}" class="${position===key?'active':''}">${label}</button>`).join('')}</div><div class="placement-actions"><button class="primary" data-action="add-placement">＋ 添加产品</button><button data-action="refresh">↻ 刷新</button><button data-action="apply-placements">应用到其他页面</button></div></div><div class="table-bar"><span>${clients[placementClient]} · ${positions[position]}的产品</span><span class="muted">排序值越大越靠前 · 下架产品置底 · 可拖动排序</span></div>${table(['','产品图标','产品名称','商户名称','上架状态','排序值','操作'],rows)}<div class="pagination">共 ${items.length} 个产品</div></section>`;
+  return heading('按展示终端和页面分别维护产品上下架与排序',null,null,false)+`<section class="panel"><div class="placement-toolbar"><div class="terminal-switch" role="group" aria-label="展示终端">${Object.entries(clients).map(([key,label])=>`<button data-action="placement-client" data-id="${key}" class="${placementClient===key?'active':''}" aria-pressed="${placementClient===key}">${label==='苹果'?'iOS（苹果）':'安卓'}</button>`).join('')}</div></div><div class="placement-pagebar"><div class="tabs">${Object.entries(positions).map(([key,label])=>`<button data-action="position" data-id="${key}" class="${position===key?'active':''}">${label}</button>`).join('')}</div><div class="placement-actions"><button class="primary" data-action="add-placement">＋ 添加产品</button><button data-action="refresh">↻ 刷新</button><button data-action="apply-placements">应用到其他页面</button></div></div><div class="table-bar"><span>${clients[placementClient]} · ${positions[position]}的产品</span><span class="muted">${position==='applying'?'信用报告最多上架一个，固定在顶部卡片右下角，不受排序值影响；贷款按排序值升序展示':'排序值越小越靠前 · 下架产品置底 · 可拖动排序'}</span></div>${table(['','产品图标','产品名称','商户名称','上架状态','排序值','操作'],rows)}<div class="pagination">共 ${items.length} 个产品</div></section>`;
 }
 function merchantsView(){
   const f=filters.merchants;
@@ -120,22 +121,22 @@ function confirmAction(title,text,run){
   $('#confirmTitle').textContent=title;$('#confirmText').textContent=text;const d=$('#confirmDialog');d.showModal();$('#confirmOk').onclick=()=>{d.close();run();};$('#confirmCancel').onclick=()=>d.close();
 }
 function appendRecord(p,type,summary,remark='',images=[]){data.records[p.id]??=[];data.records[p.id].unshift({time:now(),type,summary,remark,operator:'运营人员',images:clone(images)});p.time=now();p.user='运营人员';}
-const editFields=[['productType','产品类型'],['productImage','产品图片'],['name','产品名称'],['client','展示终端'],['cooperation','合作方式'],['logo','产品图标'],['color','主题颜色'],['minLoan','最低借款额度'],['maxLoan','最高借款额度'],['minTerm','最短借款期限'],['maxTerm','最长借款期限'],['rate','日利率'],['passRate','通过率'],['riskLockDays','风控锁定天数'],['description','产品描述'],['steps','贷款步骤'],['conditions','借款条件'],['repaymentType','还款类型'],['repaymentMethod','还款方式'],['speed','放款速度'],['accountId','结算商户与账户'],['method','结算方式'],['price','结算单价'],['tags','产品标签'],['linkAndroid','安卓产品链接'],['linkIos','苹果产品链接'],['lockOp','拒绝锁定期比较方式'],['lockDays','拒绝锁定期天数'],['fdc','非白名单用户']];
+const editFields=[['productType','产品类型'],['productImage','产品图片'],['name','产品名称'],['client','展示终端'],['cooperation','合作方式'],['logo','产品图标'],['color','主题颜色'],['minLoan','最低借款额度'],['maxLoan','最高借款额度'],['minTerm','最短借款期限'],['maxTerm','最长借款期限'],['rate','日利率'],['passRate','通过率'],['description','产品描述'],['steps','贷款步骤'],['conditions','借款条件'],['repaymentType','还款类型'],['repaymentMethod','还款方式'],['speed','放款速度'],['accountId','结算商户与账户'],['method','结算方式'],['price','结算单价'],['tags','产品标签'],['linkAndroid','安卓产品链接'],['linkIos','苹果产品链接'],['lockOp','拒绝锁定期比较方式'],['lockDays','拒绝锁定期天数'],['fdc','非白名单用户']];
 function productFields(p){
   const isReport=p.productType==='credit_report';
   const accounts=data.accounts.filter(a=>a.id===p.accountId||(a.enabled&&data.merchants.some(m=>m.id===a.merchantId&&m.enabled&&m.type==='referral')));
   const section=(title,body,cls='')=>`<section class="product-section ${cls}"><h3>${title}</h3><div class="product-section-body">${body}</div></section>`;
   return '<p class="unsaved-warning">刷新页面后，未保存的数据将丢失，请及时保存。</p><div class="product-sections">'+
-  section('基础信息',selectField('productType','产品类型',p.productType||'loan',Object.entries(productTypes),'required')+field('name','产品名称',p.name,'text','required maxlength="100"')+selectField('client','展示终端',p.client,Object.entries(clients),'required')+selectField('cooperation','合作方式',p.cooperation||'h5',[['h5','网页合作']],'required')+['android','ios'].map(client=>`<div data-product-link="${client}" ${p.client===client?'':'hidden'}>${field(client==='android'?'linkAndroid':'linkIos',clients[client]+'产品链接',p[client==='android'?'linkAndroid':'linkIos'],'url',p.client===client?'required':'disabled','以 https:// 开头')}</div>`).join(''))+
-  (isReport?section('产品图片',`<div class="field-row"><label class="required">产品图片</label><div class="field-content"><label class="upload report-upload" aria-label="上传产品图片"><span id="productImageBox">${p.productImage?`<img src="${esc(p.productImage)}" alt="产品图片预览">`:'<span class="upload-plus">＋</span>'}</span><input type="file" id="productImageFile" accept="image/png,image/jpeg,image/webp"></label><div class="help">推荐尺寸：340 × 120 像素；支持 PNG、JPG、WebP，尺寸不作强制限制</div></div></div>`,'report-image-section'):section('图标与颜色',`<div class="field-row"><label class="required">产品图标</label><div class="field-content"><label class="upload" aria-label="上传产品图标"><span id="logoBox">${p.logo||editor.id?logo(p):'<span class="upload-plus">＋</span>'}</span><input type="file" id="logoFile" accept="image/png"></label><div class="help">点击上传或更换，支持 PNG，不超过 100 千字节</div></div></div>`+field('color','主题颜色',p.color||'#409eff','color','required'),'brand-section'))+
-  (isReport?'':section('额度与期限',field('minLoan','最低借款额度',p.minLoan,'number','min="0" step="1" required','单位：印尼盾')+field('maxLoan','最高借款额度',p.maxLoan,'number','min="1" step="1" required','单位：印尼盾')+field('minTerm','最短借款期限',p.minTerm,'number','min="1" step="1" required','单位：天')+field('maxTerm','最长借款期限',p.maxTerm,'number','min="1" step="1" required','单位：天')+field('rate','日利率',p.rate,'number','min="0" step="0.0001" required','单位：百分比')+field('passRate','通过率',p.passRate??'','number','min="0" max="100" step="0.01" required','单位：百分比')+field('riskLockDays','风控锁定天数',p.riskLockDays??'','number','min="0" step="1" required','单位：天'))+
+  section('基础信息',selectField('productType','产品类型',p.productType||'loan',Object.entries(productTypes),editor.id?'disabled':'required')+field('name','产品名称',p.name,'text','required maxlength="100"')+selectField('client','展示终端',p.client,Object.entries(clients),'required')+selectField('cooperation','合作方式',p.cooperation||'h5',[['h5','网页合作']],'required')+['android','ios'].map(client=>`<div data-product-link="${client}" ${p.client===client?'':'hidden'}>${field(client==='android'?'linkAndroid':'linkIos',clients[client]+'产品链接',p[client==='android'?'linkAndroid':'linkIos'],'url',p.client===client?'required':'disabled','以 https:// 开头')}</div>`).join(''))+
+  (isReport?section('产品图片',`<div class="field-row"><label class="required">产品图片</label><div class="field-content"><label class="upload report-upload" aria-label="上传产品图片"><span id="productImageBox">${p.productImage?`<img src="${esc(p.productImage)}" alt="产品图片预览">`:'<span class="upload-plus">＋</span>'}</span><input type="file" id="productImageFile" accept="image/png,image/jpeg,image/webp"></label><div class="help">推荐尺寸：340 × 120 像素；支持 PNG、JPG、WebP，单张不超过500KB；尺寸不作强制限制</div></div></div>`,'report-image-section'):section('图标与颜色',`<div class="field-row"><label class="required">产品图标</label><div class="field-content"><label class="upload" aria-label="上传产品图标"><span id="logoBox">${p.logo||editor.id?logo(p):'<span class="upload-plus">＋</span>'}</span><input type="file" id="logoFile" accept="image/png"></label><div class="help">点击上传或更换，支持 PNG，不超过 100 千字节</div></div></div>`+field('color','主题颜色',p.color||'#409eff','color','required'),'brand-section'))+
+  (isReport?'':section('额度与期限',field('minLoan','最低借款额度',p.minLoan,'number','min="0" step="1" required','单位：印尼盾')+field('maxLoan','最高借款额度',p.maxLoan,'number','min="1" step="1" required','单位：印尼盾')+field('minTerm','最短借款期限',p.minTerm,'number','min="1" step="1" required','单位：天')+field('maxTerm','最长借款期限',p.maxTerm,'number','min="1" step="1" required','单位：天')+field('rate','日利率',p.rate,'number','min="0" step="0.0001" required','单位：百分比')+field('passRate','通过率',p.passRate??'','number','min="0" max="100" step="0.01" required','单位：百分比'))+
   section('产品详情',field('description','产品描述',p.description)+field('steps','贷款步骤',p.steps)+field('conditions','借款条件',p.conditions)+field('repaymentType','还款类型',p.repaymentType)+field('repaymentMethod','还款方式',p.repaymentMethod)+field('speed','放款速度',p.speed,'text','required','例如：最快当天')))+
   section('结算配置',selectField('accountId','结算商户与账户',p.accountId||'',[['','请选择'],...accounts.map(a=>[a.id,accountName(a.id)])],'required')+selectField('method','结算方式',p.method||'download',Object.entries(methods),'required')+field('price','结算单价',p.price??'','number','min="0" step="0.0001" required','单位：美元，最多 4 位小数；对应所选展示终端'))+
   (isReport?'':section('产品标签',`<div class="field-row"><label>产品标签</label><div class="field-content"><div id="productTags" class="product-tags"></div><div class="tag-entry"><input id="newProductTag" aria-label="新增标签内容" maxlength="30" placeholder="请输入中文标签"><button type="button" id="addProductTag" class="link">＋ 添加标签</button></div><input type="hidden" name="tags" id="f-tags" value="${esc(p.tags||'')}"></div></div>`,'tags-section'))+
   section('曝光条件',`<div class="field-row"><label for="f-lockDays">拒绝锁定期</label><div class="field-content"><div class="exposure-inputs"><select name="lockOp" aria-label="拒绝锁定期比较方式">${options([['>=','大于等于'],['>','大于'],['<=','小于等于'],['<','小于'],['=','等于']],p.lockOp||'>=')}</select><input id="f-lockDays" type="number" name="lockDays" min="0" step="1" value="${esc(p.lockDays??'')}" placeholder="请输入天数（选填）"><span>天</span></div></div></div><div class="field-row"><label>其他条件</label><div class="field-content"><label class="exposure-check"><input type="checkbox" name="fdc" ${p.fdc?'checked':''}> 非白名单用户</label><div class="help">多个曝光条件同时满足时生效</div></div></div>`,'full-section exposure-section')+'</div>';
 }
 function bindProductExtras(){
-  $('#f-productType').onchange=()=>{Object.assign(editor.draft,readProductFields());if(editor.id)renderEdit();else renderAddProduct();};
+  $('#f-productType').onchange=()=>{if(editor.id){$('#f-productType').value=editor.original.productType||'loan';toast('产品创建后类型不可修改',true);return;}Object.assign(editor.draft,readProductFields());renderAddProduct();};
   $('#f-client').onchange=ev=>{
     $$('[data-product-link]').forEach(row=>{const active=row.dataset.productLink===ev.target.value;row.hidden=!active;const input=row.querySelector('input');input.disabled=!active;input.required=active;});
   };
@@ -157,10 +158,12 @@ function renderEdit(){
 function readProductFields(){
   const fd=new FormData($('#modalForm')),v=Object.fromEntries(fd);
   for(const key of ['linkAndroid','linkIos'])v[key]=$('#f-'+key).value;
-  for(const key of ['minLoan','maxLoan','minTerm','maxTerm','passRate','riskLockDays','accountId'])if(key in v)v[key]=Number(v[key]);
+  for(const key of ['minLoan','maxLoan','minTerm','maxTerm','passRate','accountId'])if(key in v)v[key]=Number(v[key]);
+  if(editor.id)v.productType=data.products.find(p=>p.id===editor.id).productType||'loan';
   v.name=String(v.name).trim();v.lockDays=v.lockDays===''?null:Number(v.lockDays);v.fdc=fd.has('fdc');return v;
 }
 function validateProduct(){
+  if(editor.id&&$('#f-productType').value!==(data.products.find(p=>p.id===editor.id).productType||'loan')){toast('产品创建后类型不可修改',true);return false;}
   if(!$('#modalForm').reportValidity())return false;
   const p=readProductFields();
   if(!p.name){toast('请输入产品名称',true);return false;}
@@ -170,7 +173,7 @@ function validateProduct(){
 }
 function bindLogo(){
   if(editor.draft.productType==='credit_report'){
-    $('#productImageFile').onchange=async ev=>{const e=editor,file=ev.target.files[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)){toast('请选择 PNG、JPG 或 WebP 图片',true);ev.target.value='';return;}try{const url=await readFile(file);if(editor!==e)return;e.draft.productImage=url;if($('#productImageBox'))$('#productImageBox').innerHTML=`<img src="${esc(url)}" alt="产品图片预览">`;}catch{toast('图片读取失败，请重新选择',true);}};return;
+    $('#productImageFile').onchange=async ev=>{const e=editor,file=ev.target.files[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>500*1024){toast('请选择不超过500KB的 PNG、JPG 或 WebP 图片',true);ev.target.value='';return;}try{const url=await readFile(file);if(editor!==e)return;e.draft.productImage=url;if($('#productImageBox'))$('#productImageBox').innerHTML=`<img src="${esc(url)}" alt="产品图片预览">`;}catch{toast('图片读取失败，请重新选择',true);}};return;
   }
   $('#logoFile').onchange=async ev=>{const file=ev.target.files[0];if(!file)return;if(file.type!=='image/png'||file.size>100*1024){toast('请选择不超过 100 千字节的 .png 图片',true);ev.target.value='';return;}const e=editor;const url=await readFile(file);if(editor!==e)return;e.draft.logo=url;if($('#logoBox'))$('#logoBox').innerHTML=logo(e.draft);};
 }
@@ -196,6 +199,7 @@ function reviewEdit(){
 function renderRemarkThumbs(){const e=editor;$('#remarkThumbs').innerHTML=e.images.map((im,i)=>`<button type="button" data-image-index="${i}" aria-label="预览备注图片 ${i+1}"><img src="${esc(im.url)}" alt="备注图片 ${i+1}"></button>`).join('');$$('[data-image-index]').forEach(b=>b.onclick=()=>previewImage(e.images[Number(b.dataset.imageIndex)],()=>{e.images.splice(Number(b.dataset.imageIndex),1);$('#imageDialog').close();renderRemarkThumbs();}));}
 function saveProductEdit(){
   const e=editor,changed=changes(),p=data.products.find(p=>p.id===e.id),previous=clone(data);
+  if((e.draft.productType||'loan')!==(p.productType||'loan')){toast('产品创建后类型不可修改，请新建产品',true);return;}
   Object.assign(p,e.draft);if(changed.length)appendRecord(p,'编辑产品',changed.map(([k,l])=>`${l}：${k==='productImage'?'产品图片已更换':k==='logo'?'图标已更换':valueLabel(k,e.original[k])+' → '+valueLabel(k,e.draft[k])}`).join('；'),e.remark,e.images);
   if(!persist()){data=previous;return;}closeModal();render();toast('产品已保存');
 }
@@ -204,6 +208,7 @@ function addProduct(){
   editor={draft:blank};renderAddProduct();
 }
 function copyProduct(id){
+  if(!canCopyProduct()){toast('无复制产品权限',true);return;}
   const source=data.products.find(p=>p.id===id);
   const draft=Object.fromEntries(editFields.filter(([key])=>key in source).map(([key])=>[key,clone(source[key])]));
   draft.productType=source.productType||'loan';draft.name=source.name.slice(0,96)+'（副本）';draft.glyph=source.glyph;
@@ -212,15 +217,15 @@ function copyProduct(id){
 function renderAddProduct(){
   openProductPage(editor.copySource?'复制产品':'新增产品',productFields(editor.draft),footer('新增产品'),editor.copySource?'来源产品编号：'+editor.copySource:'');
   bindLogo();bindProductExtras();$('#modalForm').onsubmit=ev=>{
-    ev.preventDefault();if(!validateProduct())return;
+    ev.preventDefault();if(editor.copySource&&!canCopyProduct()){toast('无复制产品权限',true);return;}if(!validateProduct())return;
     if($('#f-productType').value!=='credit_report'&&!editor.draft.logo&&!(editor.copySource&&editor.draft.glyph)){toast('请上传产品图标',true);return;}
     const p={...editor.draft,...readProductFields(),id:Math.max(0,...data.products.map(p=>p.id))+1,enabled:true,user:'运营人员',time:now()};
     const previous=clone(data);data.products.unshift(p);appendRecord(p,'新增产品',editor.copySource?'复制自产品编号：'+editor.copySource:'创建产品');if(!persist()){data=previous;return;}closeModal();filters.products={name:'',status:'enabled',productType:'',client:'',merchant:''};render();toast('产品已新增');
   };
 }
 function showDetails(id){
-  const p=data.products.find(p=>p.id===id),items=[['产品编号',p.id],['产品名称',p.name],['产品类型',productTypes[p.productType||'loan']],['展示终端',clients[p.client]],['状态',p.enabled?'启用':'禁用'],['借款额度',`${num(p.minLoan)} ～ ${num(p.maxLoan)} 印尼盾`],['借款期限',`${p.minTerm} ～ ${p.maxTerm} 天`],['日利率',Number(p.rate).toFixed(4)+'%'],['结算商户与账户',accountName(p.accountId)],['结算单价',Number(p.price).toFixed(4)+' 美元'],['结算方式',methods[p.method]],['合作方式','网页合作'],['放款速度',p.speed||'—'],['通过率',p.passRate+'%'],['风控锁定天数',p.riskLockDays===undefined?'—':p.riskLockDays+' 天'],['主题颜色',p.color],['安卓产品链接',p.linkAndroid],['苹果产品链接',p.linkIos],['产品描述',p.description||'—'],['贷款步骤',p.steps||'—'],['借款条件',p.conditions||'—'],['还款类型',p.repaymentType||'—'],['还款方式',p.repaymentMethod||'—'],['产品标签',p.tags||'—'],['曝光条件',`${p.lockDays===null?'未设置锁定期条件':`拒绝锁定期 ${{'>=':'大于等于','>':'大于','<=':'小于等于','<':'小于','=':'等于'}[p.lockOp]} ${p.lockDays} 天`}${p.fdc?'；同时为非白名单用户':''}`]];
-  openModal('产品详情',`<div style="margin-bottom:24px">${p.productType==='credit_report'&&p.productImage?`<img class="detail-report-image" src="${esc(p.productImage)}" alt="产品图片">`:logo(p)}</div><dl class="detail-grid">${items.filter(([k])=>!(p.client==='android'&&k==='苹果产品链接')&&!(p.client==='ios'&&k==='安卓产品链接')).filter(([k])=>p.productType!=='credit_report'||!['借款额度','借款期限','日利率','放款速度','通过率','风控锁定天数','主题颜色','产品描述','贷款步骤','借款条件','还款类型','还款方式','产品标签'].includes(k)).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,'<button type="button" data-close>关闭</button>','产品编号：'+id);
+  const p=data.products.find(p=>p.id===id),items=[['产品编号',p.id],['产品名称',p.name],['产品类型',productTypes[p.productType||'loan']],['展示终端',clients[p.client]],['状态',p.enabled?'启用':'禁用'],['借款额度',`${num(p.minLoan)} ～ ${num(p.maxLoan)} 印尼盾`],['借款期限',`${p.minTerm} ～ ${p.maxTerm} 天`],['日利率',Number(p.rate).toFixed(4)+'%'],['结算商户与账户',accountName(p.accountId)],['结算单价',Number(p.price).toFixed(4)+' 美元'],['结算方式',methods[p.method]],['合作方式','网页合作'],['放款速度',p.speed||'—'],['通过率',p.passRate+'%'],['主题颜色',p.color],['安卓产品链接',p.linkAndroid],['苹果产品链接',p.linkIos],['产品描述',p.description||'—'],['贷款步骤',p.steps||'—'],['借款条件',p.conditions||'—'],['还款类型',p.repaymentType||'—'],['还款方式',p.repaymentMethod||'—'],['产品标签',p.tags||'—'],['曝光条件',`${p.lockDays===null?'未设置锁定期条件':`拒绝锁定期 ${{'>=':'大于等于','>':'大于','<=':'小于等于','<':'小于','=':'等于'}[p.lockOp]} ${p.lockDays} 天`}${p.fdc?'；同时为非白名单用户':''}`]];
+  openModal('产品详情',`<div style="margin-bottom:24px">${p.productType==='credit_report'&&p.productImage?`<img class="detail-report-image" src="${esc(p.productImage)}" alt="产品图片">`:logo(p)}</div><dl class="detail-grid">${items.filter(([k])=>!(p.client==='android'&&k==='苹果产品链接')&&!(p.client==='ios'&&k==='安卓产品链接')).filter(([k])=>p.productType!=='credit_report'||!['借款额度','借款期限','日利率','放款速度','通过率','主题颜色','产品描述','贷款步骤','借款条件','还款类型','还款方式','产品标签'].includes(k)).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,'<button type="button" data-close>关闭</button>','产品编号：'+id);
 }
 function records(id){recordId=id;recordPage=1;renderRecords();}
 function renderRecords(){
@@ -236,12 +241,23 @@ function previewImage(im,remove=null,download=false){
 }
 function downloadFile(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
 function addPlacement(){
-  const available=data.products.filter(p=>p.enabled&&p.client===placementClient&&!data.placements[position].some(o=>o.id===p.id));
-  openModal('添加产品',available.length?available.map(p=>`<label class="check-row"><input name="productIds" type="checkbox" value="${p.id}">${logo(p)}<span>${esc(p.name)}</span><span class="tag">${clients[p.client]}</span></label>`).join(''):'<div class="empty">没有可添加的启用产品</div>',footer('添加所选产品'),`${clients[placementClient]} · ${positions[position]}`);
-  $('#modalForm').onsubmit=e=>{e.preventDefault();const ids=new FormData($('#modalForm')).getAll('productIds').map(Number);if(!ids.length){toast('请先选择产品',true);return;}ids.forEach(id=>data.placements[position].push({id,rank:0,listed:false}));persist();closeModal();render();toast('产品已添加，可继续设置排序并上架');};
+  const available=data.products.filter(p=>p.client===placementClient&&!data.placements[position].some(o=>o.id===p.id));
+  openModal('添加产品',available.length?available.map(p=>`<label class="check-row"><input name="productIds" type="checkbox" value="${p.id}">${logo(p)}<span>${esc(p.name)}</span><span class="tag">${clients[p.client]}</span><span class="tag ${p.enabled?'':'gray'}">${p.enabled?'启用 · 添加后已上架':'禁用 · 添加后未上架'}</span></label>`).join(''):'<div class="empty">没有可添加的产品</div>',footer('添加所选产品'),`${clients[placementClient]} · ${positions[position]} · 新增排序值999`);
+  $('#modalForm').onsubmit=e=>{
+    e.preventDefault();const ids=new FormData($('#modalForm')).getAll('productIds').map(Number);
+    if(!ids.length){toast('请先选择产品',true);return;}
+    if(ids.some(id=>!available.some(p=>p.id===id))){toast('产品配置已变化，请重新选择',true);return;}
+    const additions=ids.map(id=>({id,rank:999,listed:!!data.products.find(p=>p.id===id).enabled}));
+    const next=[...data.placements[position],...additions];
+    if(position==='applying'&&applyingConflict(next,placementClient)){toast('申请中首页同一终端最多上架一个信用报告产品，请先下架冲突产品',true);return;}
+    const previous=data.placements[position];data.placements[position]=next;
+    if(!persist()){data.placements[position]=previous;return;}
+    closeModal();render();toast('产品已添加，页面状态已沿用产品状态，排序值为999');
+  };
 }
 function copyPlacementConfig(client,sourcePosition,targets){
   const previous=clone(data.placements),source=clone(placementItems(sourcePosition,client));
+  if(targets.includes('applying')&&applyingConflict(source,client)){toast('申请中首页同一终端最多上架一个信用报告产品，无法覆盖',true);return false;}
   for(const target of targets){
     if(target===sourcePosition||!Object.hasOwn(positions,target))continue;
     const other=data.placements[target].filter(o=>!data.products.some(p=>p.id===o.id&&p.client===client));
@@ -259,13 +275,14 @@ function applyPlacements(){
     closeModal();render();toast(`已应用到${selected.map(key=>positions[key]).join('、')}`);
   };
 }
-function listing(id){const o=data.placements[position].find(o=>o.id===id),p=data.products.find(p=>p.id===id);if(!o.listed&&!p.enabled){toast('该产品已禁用，请先在产品管理中启用',true);return;}confirmAction(`确认${o.listed?'下架':'上架'}产品？`,`${p.name} · ${clients[p.client]}\n仅影响当前终端的当前页面`,()=>{o.listed=!o.listed;persist();render();toast(o.listed?'已上架':'已下架');});}
+function applyingConflict(items,client){return items.filter(o=>o.listed&&data.products.some(p=>p.id===o.id&&p.client===client&&p.productType==='credit_report')).length>1;}
+function listing(id){const o=data.placements[position].find(o=>o.id===id),p=data.products.find(p=>p.id===id);if(!o.listed&&position==='applying'&&applyingConflict(data.placements.applying.map(item=>item.id===id?{...item,listed:true}:item),p.client)){toast('申请中首页同一终端最多上架一个信用报告产品，请先下架当前产品',true);return;}confirmAction(`确认${o.listed?'下架':'上架'}产品？`,`${p.name} · ${clients[p.client]}\n仅影响当前终端的当前页面${!p.enabled?'；产品仍禁用，页面上架后也不会展示':''}`,()=>{o.listed=!o.listed;persist();render();toast(o.listed?'已上架':'已下架');});}
 function movePlacement(id,direction,targetId){
   const items=sortedPlacements(),i=items.findIndex(o=>o.id===id),j=targetId===undefined?i+direction:items.findIndex(o=>o.id===targetId);
   if(j<0||j>=items.length||i===j)return; if(items[i].listed!==items[j].listed){toast('请在相同上架状态的产品之间调整顺序',true);return;}
   const [item]=items.splice(i,1);items.splice(j,0,item);
   // 演示约定：拖动后为当前状态组重新分配整数排序值；真实算法未核实。
-  const group=items.filter(o=>o.listed===item.listed),start=Math.min(9999,Math.max(...group.map(o=>o.rank),group.length));group.forEach((o,index)=>o.rank=start-index);persist();render();toast('排序已更新');
+  const group=items.filter(o=>o.listed===item.listed),start=Math.min(Math.min(...group.map(o=>o.rank)),9999-group.length+1);group.forEach((o,index)=>o.rank=start+index);persist();render();toast('排序已更新');
 }
 function bindDrag(){
   let dragged;
@@ -318,6 +335,7 @@ function renderTransactions(f={type:'',start:'',end:''}){
 function toggleEntity(type,id){
   if(type==='product'){
     const p=data.products.find(p=>p.id===id);
+    if(!p.enabled&&applyingConflict(data.placements.applying.map(o=>o.id===id?{...o,listed:true}:o),p.client)){toast('启用将导致申请中首页上架多个信用报告，请先移除该页面中的冲突产品',true);return;}
     const run=()=>{const before=p.enabled;p.enabled=!p.enabled;Object.values(data.placements).forEach(items=>items.forEach(o=>{if(o.id===id)o.listed=p.enabled;}));appendRecord(p,'状态变更',`状态：${before?'启用':'禁用'} → ${p.enabled?'启用':'禁用'}`);persist();render();toast(p.enabled?'产品已启用，关联位置已上架':'产品已禁用，关联位置已下架');};run();
   }else if(type==='merchant'){
     const m=data.merchants.find(m=>m.id===id);if(m.enabled&&data.accounts.some(a=>a.merchantId===id&&a.balance!==0)){toast('该商户下存在余额不为零的账户，无法禁用',true);return;}

@@ -24,7 +24,7 @@
     <main id="main"></main>
     <details class="demo-tools"><summary>原型演示设置与依据</summary><div class="demo-content">
       <p>本地静态原型 · 全部为演示数据 · 不连接生产系统</p>
-      <label>产品操作权限 <select id="permission"><option value="all">编辑、复制、详情、操作记录</option><option value="edit">编辑、复制和详情</option><option value="record">仅查看详情和操作记录</option><option value="read">仅查看详情</option></select></label>
+      <label>产品操作权限 <select id="permission"><option value="all">编辑、复制、详情、操作记录</option><option value="edit">编辑和详情（无复制权限）</option><option value="copy">复制和详情（无编辑权限）</option><option value="edit-copy">编辑、复制和详情</option><option value="record">仅查看详情和操作记录</option><option value="read">仅查看详情</option></select></label>
       <label>异常演示 <select id="failure"><option value="none">正常</option><option value="save">编辑保存失败</option><option value="records">记录加载失败</option></select></label>
       <div class="demo-actions"><button id="resetDemo">恢复全部演示数据</button><button id="exportCreditConfig">导出产品展示配置</button><a href="credit-preview/index.html" target="_blank">查看信用报告列表原型 ↗</a><a href="说明.md" target="_blank">查看依据与未核实项 ↗</a></div>
       <p>界面参考历史截图与本轮确认；编辑产品默认分步确认，支持变更备注、附件及操作记录。产品类型、同端页面配置与复制操作按本轮确认补充，未经生产核实。</p>
